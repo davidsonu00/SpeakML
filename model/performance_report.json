@@ -1,0 +1,60 @@
+{
+  "intent": {
+    "raw_prompt": "create a model which can identify the survivers of titanic using Titanic-Dataset.csv",
+    "task": "classification",
+    "domain": "custom",
+    "priority": "balanced",
+    "confidence": 0.9,
+    "custom_data_path": "Titanic-Dataset.csv",
+    "target_column": null
+  },
+  "resolved_domain": "custom:Titanic-Dataset.csv",
+  "task": "classification",
+  "best_result": {
+    "reward": 0.8251121076233184,
+    "recipe": "standard_impute",
+    "template": "SVM",
+    "config": {
+      "C": 0.744
+    },
+    "attempts_used": 1
+  },
+  "dac_rounds_logged": 40,
+  "pipeline_log": [
+    {
+      "t": 0.001,
+      "stage": "NODE1-INTENT",
+      "message": "task=classification domain=custom priority=balanced confidence=0.9"
+    },
+    {
+      "t": 0.097,
+      "stage": "NODE1-SOURCE",
+      "message": "loaded custom CSV 'Titanic-Dataset.csv', target column='Survived', shape=(891, 9)"
+    },
+    {
+      "t": 0.106,
+      "stage": "NODE1-PREP",
+      "message": "attempt 1: recipe='standard_impute'"
+    },
+    {
+      "t": 2.667,
+      "stage": "NODE2-SELECT",
+      "message": "template='SVM' (probe cv reward=0.8144)"
+    },
+    {
+      "t": 4.283,
+      "stage": "NODE3-DAC",
+      "message": "tuned 'SVM' over 10 rounds -> best cv reward=0.8204, config={'C': 0.744}"
+    },
+    {
+      "t": 4.306,
+      "stage": "GLOBAL-FEEDBACK-BUS",
+      "message": "held-out test reward=0.8251 (recipe=standard_impute, template=SVM)"
+    },
+    {
+      "t": 4.306,
+      "stage": "GLOBAL-FEEDBACK-BUS",
+      "message": "reward 0.8251 meets threshold 0.75 \u2014 accepting model, no backtrack needed."
+    }
+  ]
+}
