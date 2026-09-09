@@ -1,0 +1,115 @@
+// Prisma schema for SpeakML.
+// Run `npx prisma migrate dev --name init` to create these tables in MySQL.
+// Run `npx prisma studio` any time to browse the data in a GUI.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+// A "Project" is the top-level container the user sees. Even with no
+// login, every prompt+dataset combo the user submits creates one Project,
+// so it can hold multiple TrainingRuns over time (spec section 8 —
+// "Training #1 Ridge R²=0.71, Training #2 Random Forest R²=0.84...").
+model Project {
+  id        String   @id @default(cuid())
+  name      String
+  prompt    String   @db.Text
+  status    String   @default("CREATED") // CREATED | HAS_DATASET | TRAINING | COMPLETED
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  datasets     Dataset[]
+  trainingRuns TrainingRun[]
+
+  @@map("projects")
+}
+
+// One uploaded CSV. A project could technically get more than one dataset
+// uploaded over time (e.g. the user re-uploads a cleaned version), so this
+// is its own table rather than columns bolted onto Project.
+model Dataset {
+  id               String   @id @default(cuid())
+  projectId        String   @map("project_id")
+  originalFilename String   @map("original_filename")
+  storageKey       String   @map("storage_key") // where the actual file lives (see storage service)
+  fileSize         Int      @map("file_size") // bytes
+  rows             Int?
+  columns          Int?
+  targetColumn     String?  @map("target_column")
+  metadata         Json? // { columnNames: [...], missingValueCounts: {...}, ... }
+  createdAt        DateTime @default(now()) @map("created_at")
+
+  project      Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  trainingRuns TrainingRun[]
+
+  @@index([projectId])
+  @@map("datasets")
+}
+
+// One attempt at training a model. This is intentionally separate from
+// Project/Dataset so a project's full experiment history is queryable
+// (spec section 8's "Training #1 / #2 / #3" idea) — each row here is one
+// full run through the Python orchestrator pipeline.
+model TrainingRun {
+  id        String @id @default(cuid())
+  projectId String @map("project_id")
+  datasetId String @map("dataset_id")
+
+  status String @default("QUEUED")
+  // QUEUED | ANALYZING_DATA | PREPROCESSING | SELECTING_MODEL | TRAINING |
+  // TUNING | EVALUATING | GENERATING_ARTIFACTS | COMPLETED | FAILED
+
+  taskType     String? @map("task_type") // "classification" | "regression"
+  domain       String?
+  targetColumn String? @map("target_column")
+
+  algorithm String?
+
+  // JSON because classification vs regression metrics have totally
+  // different shapes (accuracy/f1/roc_auc vs r2/mae/rmse) — forcing them
+  // into fixed columns would mean a pile of always-half-null columns.
+  metrics         Json?
+  hyperparameters Json?
+
+  startedAt   DateTime? @map("started_at")
+  completedAt DateTime? @map("completed_at")
+
+  errorCode    String? @map("error_code")
+  errorMessage String? @map("error_message") @db.Text
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  project  Project         @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  dataset  Dataset         @relation(fields: [datasetId], references: [id])
+  artifact ModelArtifact?
+
+  @@index([projectId])
+  @@index([datasetId])
+  @@index([status])
+  @@map("training_runs")
+}
+
+// The output files of a completed training run. Kept as its own table
+// (rather than columns on TrainingRun) because it has a clean 1:1
+// relationship and a very different lifecycle (created only once training
+// SUCCEEDS) — also makes "does this training run have artifacts yet?" a
+// simple existence check.
+model ModelArtifact {
+  id            String @id @default(cuid())
+  trainingRunId String @unique @map("training_run_id")
+
+  modelStorageKey  String? @map("model_storage_key")
+  reportStorageKey String? @map("report_storage_key")
+  scriptStorageKey String? @map("script_storage_key")
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  trainingRun TrainingRun @relation(fields: [trainingRunId], references: [id], onDelete: Cascade)
+
+  @@map("model_artifacts")
+}

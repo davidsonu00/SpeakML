@@ -1,0 +1,11 @@
+node_modules/
+.env
+dist/
+coverage/
+
+storage/datasets/*
+!storage/datasets/.gitkeep
+storage/artifacts/*
+!storage/artifacts/.gitkeep
+
+*.log
