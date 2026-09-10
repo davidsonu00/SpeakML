@@ -4,14 +4,10 @@
 // There is no "load .joblib in Node" library, because joblib's format can
 // contain arbitrary Python objects (numpy arrays, sklearn classes) with no
 // JS equivalent. This means REAL prediction can only ever happen in
-// Python. Once Step 12 replaces the mock ML service, mlAdapter.predict()
-// will make an HTTP call to the Python service's own /internal/predict
-// endpoint (which does `joblib.load(...)` then `model.predict(...)`) —
-// Node's job here is only to validate the request and forward it, never
-// to run the model itself.
-//
-// For now (mock mode), this calls the mock predictor so the full
-// request/response flow is already wired and testable.
+// Python. mlAdapter.predict() makes an HTTP call to the Python service's
+// own /internal/predict endpoint (which does `joblib.load(...)` then
+// `model.predict(...)`) — Node's job here is only to validate the request
+// and forward it, never to run the model itself.
 
 const prisma = require('../config/prismaClient');
 const ApiError = require('../utils/ApiError');
@@ -28,10 +24,17 @@ async function predict({ trainingRunId, inputs }) {
   }
 
   try {
-    const result = await mlClient.predict({ task: run.taskType, inputs });
+    // trainingRunId is now forwarded so the ML service knows WHICH trained
+    // model to load (previously dropped here — a real bug, separate from
+    // the mock-vs-http issue).
+    const result = await mlClient.predict({ trainingId: run.id, task: run.taskType, inputs });
     return result; // { prediction } or { prediction, probability } — never forced into one shape
   } catch (err) {
-    throw ApiError.internal('PREDICTION_FAILED');
+    // Surface the REAL reason (e.g. "input shape/columns don't match
+    // training data") instead of a generic opaque 500. Most predict
+    // failures are bad/mismatched input, which is a client error (400),
+    // not a server bug — so use badRequest, not internal.
+    throw ApiError.badRequest('PREDICTION_FAILED', err.message || 'Prediction failed.');
   }
 }
 

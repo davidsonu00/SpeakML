@@ -7,26 +7,20 @@
 
 const env = require('../../config/env');
 const mockMlService = require('./mockMlService');
-// const httpMlService = require('./httpMlService'); // added in Step 12
+const httpMlService = require('./httpMlService'); // added in Step 12
 
 const ML_MODE = process.env.ML_MODE || 'mock';
 
 async function trainModel(payload) {
-  if (ML_MODE === 'mock') {
-    return mockMlService.trainModel(payload);
-  }
-  // Step 12 will implement this branch as a real HTTP POST to
-  // `${env.mlServiceUrl}/internal/train` with the same payload shape,
-  // returning the same response shape — trainingService.js needs zero
-  // changes when this branch is filled in.
-  throw new Error(`ML_MODE='${ML_MODE}' is not implemented yet (Step 12).`);
+  if (ML_MODE === 'mock') return mockMlService.trainModel(payload);
+  if (ML_MODE === 'http') return httpMlService.trainModel(payload);
+  throw new Error(`ML_MODE='${ML_MODE}' is not implemented yet`);
 }
 
 async function predict(payload) {
-  if (ML_MODE === 'mock') {
-    return mockMlService.predict(payload);
-  }
-  throw new Error(`ML_MODE='${ML_MODE}' is not implemented yet (Step 12).`);
+  if (ML_MODE === 'mock') return mockMlService.predict(payload);
+  if (ML_MODE === 'http') return httpMlService.predict(payload);
+  throw new Error(`ML_MODE='${ML_MODE}' is not implemented yet`);
 }
 
 module.exports = { trainModel, predict };

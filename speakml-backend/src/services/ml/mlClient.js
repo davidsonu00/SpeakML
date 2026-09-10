@@ -11,8 +11,8 @@ async function trainModel({ trainingId, prompt, datasetPath, targetColumn, datas
   return mlAdapter.trainModel({ trainingId, prompt, datasetPath, targetColumn, datasetMeta });
 }
 
-async function predict({ task, inputs }) {
-  return mlAdapter.predict({ task, inputs });
+async function predict({ trainingId, task, inputs }) {
+  return mlAdapter.predict({ trainingId, task, inputs });
 }
 
 module.exports = { trainModel, predict };
