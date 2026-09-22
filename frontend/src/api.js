@@ -1,7 +1,7 @@
 // Thin wrapper around the SpeakML backend API (v1). One place for every
 // endpoint call + the shared response envelope { success, data, message }.
 
-const API_URL = "http://localhost:4000/api/v1";
+const API_URL = `${import.meta.env.VITE_API_URL || "http://localhost:4000"}/api/v1`;
 
 async function handle(res) {
   const body = await res.json().catch(() => ({}));
