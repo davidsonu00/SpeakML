@@ -1,4 +1,9 @@
-function DatasetUpload() {
+function DatasetUpload({ file, onFileChange }) {
+  function handleChange(e) {
+    const selected = e.target.files?.[0] || null;
+    onFileChange(selected);
+  }
+
   return (
     <div className="dataset-section">
       <label htmlFor="dataset">Upload your dataset</label>
@@ -7,11 +12,16 @@ function DatasetUpload() {
         <input
           type="file"
           id="dataset"
-          accept=".csv,.xlsx,.json"
+          accept=".csv"
+          onChange={handleChange}
         />
 
-        <p>Upload CSV, XLSX or JSON</p>
-        <span>Maximum file size: 50 MB</span>
+        {/* Backend currently only accepts .csv (see upload.js fileFilter) —
+            XLSX/JSON support would need to be added server-side first. */}
+        <p>Upload CSV</p>
+        <span>Maximum file size: 10 MB</span>
+
+        {file && <p className="selected-file">Selected: {file.name}</p>}
       </div>
     </div>
   );

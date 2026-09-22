@@ -29,6 +29,7 @@ const env = {
 
   // Placeholder for the Python ML service integration (later step).
   mlServiceUrl: process.env.ML_SERVICE_URL || 'http://localhost:8000',
+  mlMode: process.env.ML_MODE || 'http',
 
   storage: {
     type: process.env.STORAGE_TYPE || 'local',

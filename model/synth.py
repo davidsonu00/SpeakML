@@ -1,6 +1,24 @@
-
+"""
+Template-Based Synthesis (Chapter 4.3): injects the winning template name
+and tuned config from the orchestrator's global_state into a deployable,
+syntactically valid Python training script.
+"""
 
 import json
+import inspect
+import data_layer
+
+
+def _extract_source_block(start_marker: str, end_marker: str) -> str:
+    """Pulls a verbatim slice of data_layer.py's source between two marker
+    strings, so the generated deployable script reuses the exact same
+    column-handling logic as the live pipeline instead of a second,
+    hand-maintained copy that could quietly drift out of sync.
+    """
+    full_source = inspect.getsource(data_layer)
+    start = full_source.index(start_marker)
+    end = full_source.index(end_marker, start)
+    return full_source[start:end].rstrip()
 
 _TEMPLATE_IMPORTS = {
     "LogisticRegression": "from sklearn.linear_model import LogisticRegression as Model",
@@ -39,24 +57,29 @@ def generate_deployable_script(global_state) -> str:
     if is_custom:
         csv_path = domain.split("custom:", 1)[1]
         target_col = global_state.get("resolved_target_column", "")
-        data_loading_block = f'''import pandas as pd
+
+        # Embed the exact same tabular-loading + column-role logic used at
+        # runtime (verbatim, from data_layer.py) so this standalone script
+        # handles the same mix of numeric/categorical/datetime/ID/boolean
+        # columns identically, instead of a simplified re-implementation
+        # that could behave differently on messy real-world data.
+        embedded_logic = _extract_source_block(
+            "_READERS = {", "def source_dataset(domain: str):"
+        )
+        data_loading_block = f'''import os
+import pandas as pd
+from sklearn.preprocessing import LabelEncoder
 
 CSV_PATH = {csv_path!r}
 TARGET_COLUMN = {target_col!r}
 
+{embedded_logic}
+
 
 def load_data():
-    df = pd.read_csv(CSV_PATH)
-    y_raw = df[TARGET_COLUMN]
-    X_df = pd.get_dummies(df.drop(columns=[TARGET_COLUMN]), drop_first=True)
-    X = X_df.to_numpy(dtype=float)
-    if y_raw.dtype == object:
-        from sklearn.preprocessing import LabelEncoder
-        y = LabelEncoder().fit_transform(y_raw.astype(str))
-    else:
-        y = y_raw.to_numpy(dtype=float)
-    return X, y'''
-        load_call = "X, y = load_data()"
+    X, y, _task, _target, _mask, _report = load_tabular_dataset(CSV_PATH, TARGET_COLUMN)
+    return X, y, _mask'''
+        load_call = "X, y, continuous_mask = load_data()"
     else:
         loader_line = {
             "iris": "from sklearn.datasets import load_iris as load_data",
@@ -66,7 +89,20 @@ def load_data():
             "diabetes": "from sklearn.datasets import load_diabetes as load_data",
         }[domain]
         data_loading_block = loader_line
-        load_call = "data = load_data()\n    X, y = data.data, data.target"
+        load_call = "data = load_data()\n    X, y = data.data, data.target\n    continuous_mask = np.ones(X.shape[1], dtype=bool)"
+
+    clip_outliers = best["recipe"] == "robust_impute"
+    clip_block = ""
+    if clip_outliers:
+        clip_block = '''
+    # Outlier clipping (only on genuinely continuous columns — one-hot /
+    # boolean flag columns are left untouched, per continuous_mask).
+    if continuous_mask.any():
+        cols = np.where(continuous_mask)[0]
+        sub = X_train[:, cols]
+        z = (sub - sub.mean(axis=0)) / (sub.std(axis=0) + 1e-9)
+        X_train[:, cols] = np.where(np.abs(z) > 3, np.sign(z) * 3 * sub.std(axis=0) + sub.mean(axis=0), sub)
+'''
 
     script = f'''"""
 Auto-synthesized by SpeakML — Conversational Machine Learning Model Builder
@@ -95,7 +131,7 @@ def main():
     X = imputer.fit_transform(X)
 
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.25, random_state=42)
-
+{clip_block}
     scaler = {scaler_line}()
     X_train = scaler.fit_transform(X_train)
     X_test = scaler.transform(X_test)

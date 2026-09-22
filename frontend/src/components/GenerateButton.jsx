@@ -1,7 +1,7 @@
-function GenerateButton() {
+function GenerateButton({ onClick, loading }) {
   return (
-    <button className="generate-button">
-      Generate Model
+    <button className="generate-button" onClick={onClick} disabled={loading}>
+      {loading ? "Generating..." : "Generate Model"}
     </button>
   );
 }

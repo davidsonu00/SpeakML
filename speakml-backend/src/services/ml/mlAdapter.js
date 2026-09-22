@@ -9,7 +9,7 @@ const env = require('../../config/env');
 const mockMlService = require('./mockMlService');
 const httpMlService = require('./httpMlService'); // added in Step 12
 
-const ML_MODE = process.env.ML_MODE || 'mock';
+const ML_MODE = env.mlMode;
 
 async function trainModel(payload) {
   if (ML_MODE === 'mock') return mockMlService.trainModel(payload);

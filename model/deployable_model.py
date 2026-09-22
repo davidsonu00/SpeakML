@@ -1,5 +1,5 @@
 """
-Auto-synthesized by SpeakML — Conversational Machine Learning Model Builder
+Auto-synthesized by SpeakML - Conversational Machine Learning Model Builder
 Domain: custom:Titanic-Dataset.csv | Task: classification | Template: SVM | Held-out reward: 0.8251
 Generated recipe: standard_impute | Tuned config: {"C": 0.744}
 """

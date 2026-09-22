@@ -32,6 +32,25 @@
   color: #ffffff;
 }
 
+.nav-links button.nav-link {
+  background: none;
+  border: none;
+  color: #a7a7b3;
+  font-size: 15px;
+  cursor: pointer;
+  padding: 8px 4px;
+  transition: color 0.2s ease;
+}
+
+.nav-links button.nav-link:hover {
+  color: #ffffff;
+}
+
+.nav-links button.nav-link.active {
+  color: #ffffff;
+  border-bottom: 2px solid #7c3aed;
+}
+
 .model-builder {
   min-height: calc(100vh - 70px);
   display: grid;
@@ -163,6 +182,7 @@
   color: #666773;
   font-size: 12px;
 }
+
 .model-type-section {
   margin-top: 30px;
   display: flex;
@@ -239,6 +259,291 @@
 .generate-button:active {
   transform: translateY(0);
 }
+
+.generate-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* ==================== SHARED SIMPLE PAGE (Results / Test) ==================== */
+.simple-page {
+  max-width: 850px;
+  margin: 0 auto;
+  padding: 60px 50px;
+}
+
+.simple-page h1 {
+  font-size: 32px;
+  margin-bottom: 24px;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 80px 20px;
+  color: #a7a7b3;
+}
+
+.empty-state h2 {
+  color: #ffffff;
+  margin-bottom: 10px;
+}
+
+.empty-state p {
+  margin-bottom: 24px;
+}
+
+.empty-state .generate-button {
+  max-width: 260px;
+  margin: 0 auto;
+}
+
+/* ==================== TEST MODEL FORM ==================== */
+.test-form {
+  margin-top: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.test-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr auto;
+  gap: 10px;
+  align-items: center;
+}
+
+.test-row-single {
+  display: grid;
+  grid-template-columns: 200px 1fr;
+  gap: 14px;
+  align-items: center;
+}
+
+.test-row-single label {
+  color: #b7b7c2;
+  font-size: 14px;
+  font-weight: 600;
+  text-transform: capitalize;
+}
+
+.test-row input,
+.test-row-single input,
+.test-row-single select {
+  padding: 12px 14px;
+  border-radius: 8px;
+  border: 1px solid #30313c;
+  background: #181920;
+  color: #ffffff;
+  font-size: 14px;
+  outline: none;
+}
+
+.test-row-single select {
+  cursor: pointer;
+}
+
+.test-row input:focus,
+.test-row-single input:focus,
+.test-row-single select:focus {
+  border-color: #7c3aed;
+}
+
+.remove-row-btn {
+  background: #181920;
+  border: 1px solid #30313c;
+  color: #a7a7b3;
+  border-radius: 8px;
+  width: 40px;
+  height: 40px;
+  cursor: pointer;
+}
+
+.remove-row-btn:hover {
+  border-color: #dc2626;
+  color: #f87171;
+}
+
+.add-row-btn {
+  align-self: flex-start;
+  background: none;
+  border: 1px dashed #444552;
+  color: #a7a7b3;
+  border-radius: 8px;
+  padding: 10px 16px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.add-row-btn:hover {
+  border-color: #7c3aed;
+  color: #ffffff;
+}
+
+.prediction-result {
+  margin-top: 12px;
+  padding: 18px;
+  border-radius: 10px;
+  background: rgba(124, 58, 237, 0.1);
+  border: 1px solid rgba(124, 58, 237, 0.4);
+  color: #ffffff;
+  font-size: 16px;
+}
+
+/* ==================== TARGET COLUMN FIELD (if still present) ==================== */
+.target-column-section {
+  margin-top: 30px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.target-column-section label {
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.optional-tag {
+  color: #666773;
+  font-weight: 400;
+  font-size: 13px;
+}
+
+.target-column-section input {
+  padding: 14px 16px;
+  border-radius: 10px;
+  border: 1px solid #30313c;
+  background: #181920;
+  color: #ffffff;
+  font-size: 15px;
+  outline: none;
+}
+
+.target-column-section input:focus {
+  border-color: #7c3aed;
+}
+
+/* ==================== STATUS / ERROR MESSAGES ==================== */
+.status-message {
+  margin-top: 16px;
+  color: #a7a7b3;
+  font-size: 14px;
+}
+
+.error-message {
+  margin-top: 16px;
+  padding: 12px 16px;
+  border-radius: 10px;
+  background: rgba(220, 38, 38, 0.1);
+  border: 1px solid rgba(220, 38, 38, 0.4);
+  color: #f87171;
+  font-size: 14px;
+}
+
+.field-hint {
+  color: #666773;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+/* ==================== RESULTS CARD ==================== */
+.results-section {
+  margin-top: 40px;
+  padding: 28px;
+  border-radius: 14px;
+  border: 1px solid #292a34;
+  background: #15161d;
+}
+
+.results-section h2 {
+  font-size: 22px;
+  margin-bottom: 20px;
+  color: #ffffff;
+}
+
+.results-section h3 {
+  font-size: 16px;
+  margin: 24px 0 12px;
+  color: #ffffff;
+}
+
+.results-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 16px;
+  padding: 16px;
+  border-radius: 10px;
+  background: #181920;
+  border: 1px solid #292a34;
+}
+
+.results-grid > div {
+  font-size: 14px;
+  color: #b7b7c2;
+}
+
+.results-grid strong {
+  display: block;
+  color: #666773;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  margin-bottom: 4px;
+}
+
+.metrics-list {
+  list-style: none;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 12px;
+  padding: 0;
+}
+
+.metrics-list li {
+  padding: 14px;
+  border-radius: 10px;
+  background: #181920;
+  border: 1px solid #292a34;
+  font-size: 14px;
+  color: #b7b7c2;
+}
+
+.metrics-list strong {
+  display: block;
+  color: #7c3aed;
+  font-size: 13px;
+  text-transform: uppercase;
+  margin-bottom: 6px;
+}
+
+.download-links {
+  margin-top: 24px;
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.download-links a {
+  padding: 10px 18px;
+  border-radius: 8px;
+  border: 1px solid #30313c;
+  background: #181920;
+  color: #ffffff;
+  font-size: 14px;
+  text-decoration: none;
+  transition: all 0.2s ease;
+}
+
+.download-links a:hover {
+  border-color: #7c3aed;
+  color: #7c3aed;
+}
+
+.selected-file {
+  color: #a7a7b3;
+  font-size: 13px;
+}
+
 @media (max-width: 900px) {
   .model-builder {
     grid-template-columns: 1fr;
@@ -286,5 +591,10 @@
 
   .sidebar {
     grid-template-columns: 1fr;
+  }
+
+  .test-row-single {
+    grid-template-columns: 1fr;
+    gap: 6px;
   }
 }

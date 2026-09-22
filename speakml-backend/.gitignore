@@ -7,5 +7,6 @@ storage/datasets/*
 !storage/datasets/.gitkeep
 storage/artifacts/*
 !storage/artifacts/.gitkeep
+storage-test/
 
 *.log

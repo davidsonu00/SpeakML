@@ -1,9 +1,22 @@
+"""
+The Global Context Bus / Blackboard Pattern (Chapter 4.5)
+-------------------------------------------------------------
+Wires Node 1 (intent + data + preprocessing) -> Node 2 (template
+selection) -> Node 3 (DAC tuning) together through a shared mutable
+"global_state" dict, and implements the "backtrack if reward is low"
+feedback behaviour from Chapter 1.3 / Objective 5: if the final reward
+after DAC tuning is below a threshold, the orchestrator writes the
+failure back onto the bus, tells Node 1's preprocessing policy to try a
+different recipe (via bandit reward update), and re-runs the pipeline —
+up to a max number of backtracks — instead of just returning a weak model.
+"""
 
 import time
+import numpy as np
 from sklearn.metrics import accuracy_score, r2_score
 
 from intent_layer import extract_intent
-from data_layer import source_dataset, load_csv_dataset, apply_recipe, PreprocessingPolicy
+from data_layer import source_dataset, load_tabular_dataset, apply_recipe, PreprocessingPolicy
 from model_selection import TemplateBandit
 from dac_loop import run_dac_loop, _build_model
 
@@ -33,19 +46,32 @@ def run_pipeline(prompt: str, dac_rounds: int = 10):
          f"task={intent.task} domain={intent.domain} priority={intent.priority} confidence={intent.confidence}")
 
     if intent.custom_data_path:
-        X, y, inferred_task, resolved_target = load_csv_dataset(intent.custom_data_path, intent.target_column)
+        X, y, inferred_task, resolved_target, continuous_mask, load_report = load_tabular_dataset(
+            intent.custom_data_path, intent.target_column
+        )
         resolved_domain = f"custom:{intent.custom_data_path}"
         global_state["resolved_domain"] = resolved_domain
         global_state["resolved_target_column"] = resolved_target
+        global_state["load_report"] = load_report
         if inferred_task != intent.task:
             _log(global_state, "NODE1-SOURCE",
                  f"prompt implied task='{intent.task}' but target column '{resolved_target}' "
                  f"actually looks like '{inferred_task}' — using the data-driven task type.")
             intent.task = inferred_task
         _log(global_state, "NODE1-SOURCE",
-             f"loaded custom CSV '{intent.custom_data_path}', target column='{resolved_target}', shape={X.shape}")
+             f"loaded '{intent.custom_data_path}', target column='{resolved_target}', shape={X.shape}")
+        cr = load_report["column_roles"]
+        _log(global_state, "NODE1-SOURCE",
+             f"column handling — numeric:{len(cr['numeric'])} boolean:{len(cr['boolean'])} "
+             f"datetime:{len(cr['datetime_expanded'])} one-hot:{len(cr['one_hot'])} "
+             f"frequency-encoded:{len(cr['frequency_encoded'])} dropped:{len(cr['dropped'])}"
+             + (f" ({', '.join(cr['dropped'])})" if cr["dropped"] else ""))
+        if load_report["rows_dropped_duplicates"] or load_report["rows_dropped_missing_target"]:
+            _log(global_state, "NODE1-SOURCE",
+                 f"dropped {load_report['rows_dropped_missing_target']} rows with missing target, "
+                 f"{load_report['rows_dropped_duplicates']} exact-duplicate rows -> {load_report['final_rows']} rows remain")
     else:
-        X, y, resolved_domain = source_dataset(intent.domain)
+        X, y, resolved_domain, continuous_mask = source_dataset(intent.domain)
         global_state["resolved_domain"] = resolved_domain
         _log(global_state, "NODE1-SOURCE", f"dataset resolved to '{resolved_domain}', shape={X.shape}")
 
@@ -59,7 +85,7 @@ def run_pipeline(prompt: str, dac_rounds: int = 10):
         attempt += 1
         # --- Step 1: Node 1 preprocessing policy selects + applies a recipe ---
         recipe_name = policy.select()
-        X_train, X_test, y_train, y_test = apply_recipe(X, y, recipe_name)
+        X_train, X_test, y_train, y_test = apply_recipe(X, y, recipe_name, continuous_mask=continuous_mask)
         _log(global_state, "NODE1-PREP", f"attempt {attempt}: recipe='{recipe_name}'")
 
         # --- Step 2: Node 2 selects a template via bandit ---
@@ -81,8 +107,13 @@ def run_pipeline(prompt: str, dac_rounds: int = 10):
         preds = final_model.predict(X_test)
         if intent.task == "classification":
             test_reward = accuracy_score(y_test, preds)
+        elif len(y_test) < 2:
+            test_reward = best_cv_reward
         else:
             test_reward = r2_score(y_test, preds)
+
+        if not np.isfinite(test_reward):
+            test_reward = best_cv_reward if np.isfinite(best_cv_reward) else -1e9
 
         _log(global_state, "GLOBAL-FEEDBACK-BUS",
              f"held-out test reward={test_reward:.4f} (recipe={recipe_name}, template={template_name})")

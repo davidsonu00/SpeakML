@@ -35,8 +35,12 @@ class TemplateBandit:
         model = self.templates[name]()
         scoring = "accuracy" if self.task == "classification" else "r2"
         cv = 3 if len(X_train) >= 30 else 2
-        scores = cross_val_score(model, X_train, y_train, cv=cv, scoring=scoring)
-        return float(np.mean(scores))
+        try:
+            scores = cross_val_score(model, X_train, y_train, cv=cv, scoring=scoring)
+            reward = float(np.mean(scores))
+            return reward if np.isfinite(reward) else -1.0
+        except Exception:
+            return -1.0
 
     def run(self, X_train, y_train, n_rounds: int = None):
         """Pull each arm at least once, then explore/exploit for n_rounds more.

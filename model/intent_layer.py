@@ -1,4 +1,18 @@
+"""
+Node 1a: Cognitive Semantic Layer ("The Interpreter")
+------------------------------------------------------
+Extracts Task / Target / Domain / Priority from a natural-language prompt.
 
+NOTE ON DESIGN: The synopsis specifies an "LLM-based" intent layer. Running a
+live LLM API call is out of scope for a self-contained offline demo, so this
+module implements the same *interface* (prompt in -> structured intent out)
+using a transparent keyword/regex scorer instead of a hosted model. Because
+the rest of the pipeline (Node 2, Node 3, orchestrator) only depends on the
+IntentVector dataclass this function returns, you can swap in a real LLM call
+later (e.g. an Anthropic or OpenAI chat completion that returns the same
+JSON schema) without touching anything downstream. That call site is marked
+below with LLM_SWAP_POINT.
+"""
 
 from dataclasses import dataclass, asdict
 import re
@@ -18,8 +32,11 @@ class IntentVector:
         return asdict(self)
 
 
-# Matches "my_data.csv", "/path/to/file.csv", "sales_data.csv", etc.
-_CSV_PATH_PATTERN = re.compile(r"([\w\-./\\]+\.csv)", re.IGNORECASE)
+# Matches "my_data.csv", "/path/to/file.xlsx", "sales_data.tsv", "records.json",
+# "table.parquet", etc — any of the file types load_tabular_dataset supports.
+_DATA_FILE_PATTERN = re.compile(
+    r"([\w\-./\\]+\.(?:csv|tsv|txt|xlsx|xls|json|parquet))", re.IGNORECASE
+)
 
 # Matches "target column is X", "predict the X column", "predict X"
 _TARGET_COLUMN_PATTERNS = [
@@ -58,14 +75,15 @@ def extract_intent(prompt: str) -> IntentVector:
     """Node 1a entry point. Deterministic, explainable intent extraction."""
     text = prompt.lower()
 
-    # --- custom dataset detection: if the prompt names a CSV file, that
-    # takes priority over the built-in domain library entirely. Task type
-    # still needs to be figured out (below), since a CSV alone doesn't say
-    # classification vs regression — that gets inferred later from the
-    # actual target column values once the file is loaded (see
-    # data_layer.load_csv_dataset), or from task-override words here. ---
-    csv_match = _CSV_PATH_PATTERN.search(prompt)
-    custom_data_path = csv_match.group(1) if csv_match else None
+    # --- custom dataset detection: if the prompt names a supported data
+    # file (CSV/TSV/Excel/JSON/Parquet), that takes priority over the
+    # built-in domain library entirely. Task type still needs to be
+    # figured out (below), since a file alone doesn't say classification
+    # vs regression — that gets confirmed later from the actual target
+    # column values once the file is loaded (see
+    # data_layer.load_tabular_dataset), or from task-override words here. ---
+    file_match = _DATA_FILE_PATTERN.search(prompt)
+    custom_data_path = file_match.group(1) if file_match else None
 
     target_column = None
     for pattern in _TARGET_COLUMN_PATTERNS:

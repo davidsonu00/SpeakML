@@ -49,7 +49,12 @@ def run_dac_loop(template_name, template_ctor, X_train, y_train, task,
     if not space:
         # No tunable params defined for this template -> single eval.
         model = template_ctor()
-        reward = float(np.mean(cross_val_score(model, X_train, y_train, cv=cv, scoring=scoring)))
+        try:
+            reward = float(np.mean(cross_val_score(model, X_train, y_train, cv=cv, scoring=scoring)))
+        except Exception:
+            reward = -1.0
+        if not np.isfinite(reward):
+            reward = -1.0
         log.append({"round": 1, "config": {}, "reward": round(reward, 4), "pruned": False})
         return {}, reward, log
 
@@ -74,6 +79,8 @@ def run_dac_loop(template_name, template_ctor, X_train, y_train, task,
             try:
                 reward = float(np.mean(cross_val_score(model, X_train, y_train, cv=cv, scoring=scoring)))
             except Exception:
+                reward = -1.0
+            if not np.isfinite(reward):
                 reward = -1.0
             log.append({"round": round_i, "config": cfg, "reward": round(reward, 4), "pruned": False})
             seen_configs.append(cfg)
