@@ -24,7 +24,15 @@ async function saveDataset(tempFilePath, originalFilename) {
   const key = `datasets/${crypto.randomUUID()}${ext}`;
   const destPath = path.join(env.storage.path, key);
   await ensureDir(path.dirname(destPath));
-  await fsp.rename(tempFilePath, destPath);
+  try {
+    await fsp.rename(tempFilePath, destPath);
+  } catch (err) {
+    if (err.code !== 'EXDEV') throw err;
+    // /tmp and the storage volume are different filesystems in Docker:
+    // rename can't cross them, so copy and then remove the temp file.
+    await fsp.copyFile(tempFilePath, destPath);
+    await fsp.unlink(tempFilePath);
+  }
   return key;
 }
 
